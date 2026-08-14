@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "MTE.PowerShell/1.0.0": {
+        "runtime": {
+          "MTE.PowerShell.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MTE.PowerShell/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

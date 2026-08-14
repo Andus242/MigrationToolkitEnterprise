@@ -1,0 +1,94 @@
+{
+  "version": 3,
+  "targets": {
+    "net8.0": {
+      "MTE.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/MTE.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/MTE.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MTE.Core/1.0.0": {
+      "type": "project",
+      "path": "../MTE.Core/MTE.Core.csproj",
+      "msbuildProject": "../MTE.Core/MTE.Core.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0": [
+      "MTE.Core >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\Andus\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\Andus\\MigrationToolkitEnterprise\\src\\MTE.Engine\\MTE.Engine.csproj",
+      "projectName": "MTE.Engine",
+      "projectPath": "C:\\Users\\Andus\\MigrationToolkitEnterprise\\src\\MTE.Engine\\MTE.Engine.csproj",
+      "packagesPath": "C:\\Users\\Andus\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Andus\\MigrationToolkitEnterprise\\src\\MTE.Engine\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\Andus\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "projectReferences": {
+            "C:\\Users\\Andus\\MigrationToolkitEnterprise\\src\\MTE.Core\\MTE.Core.csproj": {
+              "projectPath": "C:\\Users\\Andus\\MigrationToolkitEnterprise\\src\\MTE.Core\\MTE.Core.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      }
+    },
+    "frameworks": {
+      "net8.0": {
+        "targetAlias": "net8.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.423/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

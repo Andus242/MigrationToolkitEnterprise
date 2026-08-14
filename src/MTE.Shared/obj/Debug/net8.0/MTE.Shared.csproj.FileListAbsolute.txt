@@ -1,0 +1,12 @@
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\bin\Debug\net8.0\MTE.Shared.deps.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\bin\Debug\net8.0\MTE.Shared.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\bin\Debug\net8.0\MTE.Shared.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.AssemblyInfoInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.AssemblyInfo.cs
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.csproj.CoreCompileInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.sourcelink.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\refint\MTE.Shared.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\MTE.Shared.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Shared\obj\Debug\net8.0\ref\MTE.Shared.dll

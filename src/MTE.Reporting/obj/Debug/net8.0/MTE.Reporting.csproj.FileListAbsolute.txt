@@ -1,0 +1,12 @@
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\bin\Debug\net8.0\MTE.Reporting.deps.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\bin\Debug\net8.0\MTE.Reporting.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\bin\Debug\net8.0\MTE.Reporting.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.AssemblyInfoInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.AssemblyInfo.cs
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.csproj.CoreCompileInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.sourcelink.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\refint\MTE.Reporting.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\MTE.Reporting.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Reporting\obj\Debug\net8.0\ref\MTE.Reporting.dll

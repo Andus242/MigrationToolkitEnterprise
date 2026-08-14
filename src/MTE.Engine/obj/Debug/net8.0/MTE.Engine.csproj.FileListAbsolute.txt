@@ -1,0 +1,16 @@
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\bin\Debug\net8.0\MTE.Engine.deps.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\bin\Debug\net8.0\MTE.Engine.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\bin\Debug\net8.0\MTE.Engine.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\bin\Debug\net8.0\MTE.Core.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\bin\Debug\net8.0\MTE.Core.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.csproj.AssemblyReference.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.AssemblyInfoInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.AssemblyInfo.cs
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.csproj.CoreCompileInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.sourcelink.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.csproj.Up2Date
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\refint\MTE.Engine.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\MTE.Engine.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.Engine\obj\Debug\net8.0\ref\MTE.Engine.dll

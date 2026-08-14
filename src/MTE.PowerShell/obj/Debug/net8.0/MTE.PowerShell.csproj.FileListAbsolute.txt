@@ -1,0 +1,12 @@
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\bin\Debug\net8.0\MTE.PowerShell.deps.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\bin\Debug\net8.0\MTE.PowerShell.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\bin\Debug\net8.0\MTE.PowerShell.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.AssemblyInfoInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.AssemblyInfo.cs
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.csproj.CoreCompileInputs.cache
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.sourcelink.json
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\refint\MTE.PowerShell.dll
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\MTE.PowerShell.pdb
+C:\Users\Andus\MigrationToolkitEnterprise\src\MTE.PowerShell\obj\Debug\net8.0\ref\MTE.PowerShell.dll
