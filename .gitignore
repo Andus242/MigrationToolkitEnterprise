@@ -21,3 +21,21 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+
+# User-specific files
+*.user
+*.suo
+
+# Test results
+TestResults/
+*.trx
+
+# Build logs
+*.log
+
