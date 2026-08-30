@@ -1,4 +1,4 @@
-namespace MTE.Core.Models;
+﻿namespace MTE.Core.Models;
 
 public sealed class UserProfileInformation
 {
@@ -6,7 +6,7 @@ public sealed class UserProfileInformation
 
     public string ProfilePath { get; init; } = string.Empty;
 
-    public long SizeBytes { get; init; }
+    public long SizeBytes { get; set; }
 
     public bool IsCurrentUser { get; init; }
 

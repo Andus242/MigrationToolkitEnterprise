@@ -16,8 +16,9 @@ public sealed class MigrationVerificationTestService
         _logger = logger;
     }
 
-    public async Task<VerificationResult> RunTestAsync(
+        public async Task<VerificationResult> RunTestAsync(
         string destinationRoot,
+        IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var testDirectory = Path.Combine(
@@ -28,7 +29,7 @@ public sealed class MigrationVerificationTestService
 
         var sourceFile = Path.Combine(
             testDirectory,
-            "MTE_Verification_Test.txt");
+            "MTE_Verification_Test.bin");
 
         var destinationDirectory = Path.Combine(
             destinationRoot,
@@ -36,27 +37,130 @@ public sealed class MigrationVerificationTestService
 
         var destinationFile = Path.Combine(
             destinationDirectory,
-            "MTE_Verification_Test.txt");
+            "MTE_Verification_Test.bin");
 
-        var testContent =
-            "Migration Toolkit Enterprise verification test." +
-            Environment.NewLine +
-            $"Created: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+        try
+        {
+            const long testFileSize =
+                100L * 1024 * 1024;
 
-        await File.WriteAllTextAsync(
-            sourceFile,
-            testContent,
-            cancellationToken);
+            _logger.Info(
+                "Creating MTE verification test file (100 MB).");
 
-        _logger.Info(
-            "Starting MTE verification test.");
+            progress?.Report(0);
 
-        var result =
-            await _fileMigrationService.CopyAndVerifyAsync(
+            await using (var stream = new FileStream(
                 sourceFile,
-                destinationFile,
-                cancellationToken);
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 1024 * 1024,
+                useAsync: true))
+            {
+                var buffer =
+                    new byte[1024 * 1024];
 
-        return result;
+                long bytesWritten = 0;
+
+                while (bytesWritten < testFileSize)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var remaining =
+                        testFileSize - bytesWritten;
+
+                    var bytesToWrite =
+                        (int)Math.Min(
+                            buffer.Length,
+                            remaining);
+
+                    await stream.WriteAsync(
+                        buffer.AsMemory(0, bytesToWrite),
+                        cancellationToken);
+
+                    bytesWritten += bytesToWrite;
+
+                    var creationProgress =
+                        (double)bytesWritten /
+                        testFileSize *
+                        10;
+
+                    progress?.Report(
+                        creationProgress);
+                }
+
+                await stream.FlushAsync(
+                    cancellationToken);
+            }
+
+            _logger.Info(
+                "Starting MTE verification test.");
+
+            progress?.Report(10);
+
+            var copyProgress =
+                new Progress<double>(
+                    value =>
+                    {
+                        var mappedProgress =
+                            10 +
+                            (value * 0.85);
+
+                        progress?.Report(
+                            Math.Min(
+                                95,
+                                mappedProgress));
+                    });
+
+            var result =
+                await _fileMigrationService.CopyAndVerifyAsync(
+                    sourceFile,
+                    destinationFile,
+                    copyProgress,
+                    cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (result.Verified)
+            {
+                progress?.Report(100);
+            }
+
+            return result;
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(sourceFile))
+                {
+                    File.Delete(sourceFile);
+                }
+            }
+            catch
+            {
+                // Cleanup failure must not hide the verification result.
+            }
+
+            try
+            {
+                if (File.Exists(destinationFile))
+                {
+                    File.Delete(destinationFile);
+                }
+
+                if (Directory.Exists(destinationDirectory) &&
+                    !Directory.EnumerateFileSystemEntries(destinationDirectory).Any())
+                {
+                    Directory.Delete(destinationDirectory);
+                }
+            }
+            catch
+            {
+                // Cleanup failure must not hide the verification result.
+            }
+        }
     }
 }
+
+

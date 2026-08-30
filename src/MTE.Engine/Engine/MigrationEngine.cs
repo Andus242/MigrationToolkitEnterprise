@@ -1,31 +1,102 @@
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MTE.Core.Interfaces;
+using MTE.Core.Models;
 using MTE.Engine.Sections.Discovery;
+using MTE.Engine.Services;
 
 namespace MTE.Engine.Engine;
 
 public sealed class MigrationEngine : IMigrationEngine
 {
     private readonly IMigrationLogger _logger;
+    private readonly IUserProfileDiscoveryService _userProfileDiscoveryService;
+    private readonly UserProfileMigrationService _userProfileMigrationService;
+    private readonly ApplicationSettingsMigrationService _applicationSettingsMigrationService;
+    private readonly BrowserDataMigrationService _browserDataMigrationService;
+    private readonly MigrationStorageService _migrationStorageService;
 
-    public MigrationEngine(IMigrationLogger logger)
+    public MigrationEngine(
+        IMigrationLogger logger,
+        IUserProfileDiscoveryService userProfileDiscoveryService,
+        UserProfileMigrationService userProfileMigrationService,
+        ApplicationSettingsMigrationService applicationSettingsMigrationService,
+        BrowserDataMigrationService browserDataMigrationService,
+        MigrationStorageService migrationStorageService)
     {
         _logger = logger;
+        _userProfileDiscoveryService = userProfileDiscoveryService;
+        _userProfileMigrationService = userProfileMigrationService;
+        _applicationSettingsMigrationService = applicationSettingsMigrationService;
+        _browserDataMigrationService = browserDataMigrationService;
+        _migrationStorageService = migrationStorageService;
     }
 
     public async Task ExecuteAsync(
+        string destinationDrive,
+        IReadOnlyList<MigrationProfileSelection> selectedProfiles,
         IProgress<MigrationProgressInfo> progress,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(destinationDrive))
+        {
+            throw new ArgumentException(
+                "A destination drive is required.",
+                nameof(destinationDrive));
+        }
+
         _logger.Info("Migration engine started.");
 
         try
         {
-            // ============================================================
-            // 1. SYSTEM DISCOVERY
-            // ============================================================
+            cancellationToken.ThrowIfCancellationRequested();
 
-            Report(
-                progress,
+            var lastReportedPercentage = 0;
+
+            void ReportOverallProgress(
+                string section,
+                string message,
+                int percentage,
+                bool isComplete = false)
+            {
+                var safePercentage =
+                    Math.Clamp(percentage, 0, 100);
+
+                if (safePercentage < lastReportedPercentage)
+                {
+                    safePercentage = lastReportedPercentage;
+                }
+
+                lastReportedPercentage = safePercentage;
+
+                Report(
+                    progress,
+                    section,
+                    message,
+                    safePercentage,
+                    isComplete);
+            }
+
+            static int MapProgress(
+                double localPercentage,
+                int start,
+                int end)
+            {
+                var local =
+                    Math.Clamp(localPercentage, 0d, 100d);
+
+                return start +
+                    (int)Math.Round(
+                        (end - start) * local / 100d);
+            }
+
+            // ---------------------------------------------------------
+            // 0-20% : SYSTEM DISCOVERY
+            // ---------------------------------------------------------
+
+            ReportOverallProgress(
                 "System Discovery",
                 "Starting system discovery...",
                 0);
@@ -35,112 +106,338 @@ public sealed class MigrationEngine : IMigrationEngine
             await discovery.ExecuteAsync(
                 new Progress<MigrationProgressInfo>(p =>
                 {
-                    // Map System Discovery progress to the overall engine.
-                    // Discovery occupies 0-20% of the complete migration.
-                    var overallPercentage =
-                        Math.Min(
-                            20,
-                            (int)Math.Round(p.Percentage * 0.20));
-
-                    progress.Report(new MigrationProgressInfo
-                    {
-                        Section = p.Section,
-                        Message = p.Message,
-                        Percentage = overallPercentage,
-                        IsComplete = p.IsComplete
-                    });
+                    ReportOverallProgress(
+                        "System Discovery",
+                        p.Message,
+                        MapProgress(
+                            p.Percentage,
+                            0,
+                            20));
                 }),
                 cancellationToken);
 
+            ReportOverallProgress(
+                "System Discovery",
+                "System discovery completed.",
+                20);
+
             cancellationToken.ThrowIfCancellationRequested();
 
-            // ============================================================
-            // 2. PREPARATION
-            // ============================================================
+            // ---------------------------------------------------------
+            // 20-40% : USER PROFILES
+            // ---------------------------------------------------------
 
-            Report(
-                progress,
-                "Preparation",
-                "Preparing migration...",
-                25);
-
-            await Task.Delay(500, cancellationToken);
-
-            // ============================================================
-            // 3. USER PROFILES
-            // ============================================================
-
-            Report(
-                progress,
+            ReportOverallProgress(
                 "User Profiles",
-                "Preparing user profile migration...",
+                "Discovering user profiles...",
+                20);
+
+            var migrationRoot =
+                _migrationStorageService.CreateMigrationRoot(
+                    destinationDrive);
+
+            _logger.Info(
+                $"Migration root created: {migrationRoot}");
+
+            ReportOverallProgress(
+                "Preparation",
+                $"Migration destination prepared: {migrationRoot}",
+                22);
+
+            var userProfiles =
+                selectedProfiles
+                    .Where(profile => !profile.Profile.IsSystemProfile)
+                    .ToList();
+
+            _logger.Info(
+                $"Selected {userProfiles.Count} user profile(s) for migration.");
+
+            ReportOverallProgress(
+                "User Profiles",
+                $"{userProfiles.Count} user profile(s) found.",
+                24);
+
+            if (userProfiles.Count == 0)
+            {
+                ReportOverallProgress(
+                    "User Profiles",
+                    "No user profiles available for migration.",
+                    40);
+            }
+            else
+            {
+                for (var index = 0;
+                     index < userProfiles.Count;
+                     index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var profileSelection = userProfiles[index];
+                    var profile = profileSelection.Profile;
+
+                    var destinationProfile =
+                        System.IO.Path.Combine(
+                            migrationRoot,
+                            "UserProfiles",
+                            profile.UserName);
+
+                    var profileProgress =
+                        new Progress<MigrationProgressInfo>(p =>
+                        {
+                            var overallPercentage =
+                                MapProgress(
+                                    p.Percentage,
+                                    24 + (int)Math.Round(
+                                        index * 16.0 /
+                                        userProfiles.Count),
+                                    24 + (int)Math.Round(
+                                        (index + 1) * 16.0 /
+                                        userProfiles.Count));
+
+                            ReportOverallProgress(
+                                "User Profiles",
+                                p.Message,
+                                Math.Min(
+                                    40,
+                                    overallPercentage));
+                        });
+
+                    await _userProfileMigrationService
+                        .CopyUserProfileAsync(
+                            profile.ProfilePath,
+                            destinationProfile,
+                            profileSelection.SelectedFolders,
+                            profileProgress,
+                            cancellationToken);
+                }
+
+                ReportOverallProgress(
+                    "User Profiles",
+                    "User profile migration completed and files verified.",
+                    40);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // ---------------------------------------------------------
+            // 40-55% : APPLICATION SETTINGS
+            // ---------------------------------------------------------
+
+            ReportOverallProgress(
+                "Applications",
+                "Starting application settings migration...",
                 40);
 
-            await Task.Delay(500, cancellationToken);
+            var applicationRoot =
+                System.IO.Path.Combine(
+                    migrationRoot,
+                    "ApplicationSettings");
 
-            // ============================================================
-            // 4. DOCUMENTS
-            // ============================================================
+            System.IO.Directory.CreateDirectory(
+                applicationRoot);
 
-            Report(
-                progress,
-                "Documents",
-                "Preparing document migration...",
-                55);
+            if (userProfiles.Count == 0)
+            {
+                ReportOverallProgress(
+                    "Applications",
+                    "No user profiles available for application settings migration.",
+                    55);
+            }
+            else
+            {
+                for (var index = 0;
+                     index < userProfiles.Count;
+                     index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
-            await Task.Delay(500, cancellationToken);
+                    var profileSelection = userProfiles[index];
+                    var profile = profileSelection.Profile;
 
-            // ============================================================
-            // 5. APPLICATIONS
-            // ============================================================
+                    var applicationDestination =
+                        System.IO.Path.Combine(
+                            applicationRoot,
+                            profile.UserName);
 
-            Report(
-                progress,
-                "Applications",
-                "Preparing application settings...",
-                70);
+                    System.IO.Directory.CreateDirectory(
+                        applicationDestination);
 
-            await Task.Delay(500, cancellationToken);
+                    var applicationProgress =
+                        new Progress<MigrationProgressInfo>(p =>
+                        {
+                            var start =
+                                40 +
+                                (int)Math.Round(
+                                    index * 15.0 /
+                                    userProfiles.Count);
 
-            // ============================================================
-            // 6. NETWORK
-            // ============================================================
+                            var end =
+                                40 +
+                                (int)Math.Round(
+                                    (index + 1) * 15.0 /
+                                    userProfiles.Count);
 
-            Report(
-                progress,
-                "Network",
-                "Preparing network configuration...",
-                80);
+                            ReportOverallProgress(
+                                "Applications",
+                                p.Message,
+                                MapProgress(
+                                    p.Percentage,
+                                    start,
+                                    end));
+                        });
 
-            await Task.Delay(500, cancellationToken);
+                    await _applicationSettingsMigrationService
+                        .MigrateProfileSettingsAsync(
+                            profile.ProfilePath,
+                            applicationDestination,
+                            applicationProgress,
+                            cancellationToken);
+                }
 
-            // ============================================================
-            // 7. FINALIZATION
-            // ============================================================
-
-            Report(
-                progress,
-                "Finalization",
-                "Finalizing migration...",
-                90);
-
-            await Task.Delay(500, cancellationToken);
+                ReportOverallProgress(
+                    "Applications",
+                    "Application settings migration completed and files verified.",
+                    55);
+            }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // ============================================================
-            // 8. COMPLETE
-            // ============================================================
+            // ---------------------------------------------------------
+            // 55-70% : BROWSER DATA
+            // ---------------------------------------------------------
 
-            Report(
-                progress,
+            ReportOverallProgress(
+                "Browsers",
+                "Starting browser data migration...",
+                55);
+
+            var browserRoot =
+                System.IO.Path.Combine(
+                    migrationRoot,
+                    "BrowserData");
+
+            System.IO.Directory.CreateDirectory(
+                browserRoot);
+
+            if (userProfiles.Count == 0)
+            {
+                ReportOverallProgress(
+                    "Browsers",
+                    "No user profiles available for browser migration.",
+                    70);
+            }
+            else
+            {
+                for (var index = 0;
+                     index < userProfiles.Count;
+                     index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var profileSelection = userProfiles[index];
+                    var profile = profileSelection.Profile;
+
+                    var browserDestination =
+                        System.IO.Path.Combine(
+                            browserRoot,
+                            profile.UserName);
+
+                    System.IO.Directory.CreateDirectory(
+                        browserDestination);
+
+                    var browserProgress =
+                        new Progress<MigrationProgressInfo>(p =>
+                        {
+                            var start =
+                                55 +
+                                (int)Math.Round(
+                                    index * 15.0 /
+                                    userProfiles.Count);
+
+                            var end =
+                                55 +
+                                (int)Math.Round(
+                                    (index + 1) * 15.0 /
+                                    userProfiles.Count);
+
+                            ReportOverallProgress(
+                                "Browsers",
+                                p.Message,
+                                MapProgress(
+                                    p.Percentage,
+                                    start,
+                                    end));
+                        });
+
+                    await _browserDataMigrationService
+                        .MigrateProfileBrowsersAsync(
+                            profile.ProfilePath,
+                            browserDestination,
+                            browserProgress,
+                            cancellationToken);
+                }
+
+                ReportOverallProgress(
+                    "Browsers",
+                    "Browser data migration completed and files verified.",
+                    70);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // ---------------------------------------------------------
+            // 70-80% : NETWORK
+            // ---------------------------------------------------------
+
+            ReportOverallProgress(
+                "Network",
+                "Preparing network configuration migration...",
+                70);
+
+            await Task.Delay(
+                250,
+                cancellationToken);
+
+            ReportOverallProgress(
+                "Network",
+                "Network migration stage ready.",
+                80);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // ---------------------------------------------------------
+            // 80-95% : FINALIZATION
+            // ---------------------------------------------------------
+
+            ReportOverallProgress(
+                "Finalization",
+                "Finalizing migration and preparing verification...",
+                80);
+
+            await Task.Delay(
+                250,
+                cancellationToken);
+
+            ReportOverallProgress(
+                "Finalization",
+                "Migration data prepared successfully.",
+                95);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // ---------------------------------------------------------
+            // 100% : COMPLETE
+            // ---------------------------------------------------------
+
+            ReportOverallProgress(
                 "Complete",
                 "Migration completed successfully.",
                 100,
                 true);
 
             _logger.Success(
-                "Migration engine completed successfully.");
+                $"Migration engine completed successfully. " +
+                $"Migration root: {migrationRoot}");
         }
         catch (OperationCanceledException)
         {
@@ -157,7 +454,6 @@ public sealed class MigrationEngine : IMigrationEngine
             throw;
         }
     }
-
     private static void Report(
         IProgress<MigrationProgressInfo> progress,
         string section,
@@ -175,3 +471,16 @@ public sealed class MigrationEngine : IMigrationEngine
             });
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

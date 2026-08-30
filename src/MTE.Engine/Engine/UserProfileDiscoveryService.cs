@@ -1,4 +1,4 @@
-using MTE.Core.Interfaces;
+﻿using MTE.Core.Interfaces;
 using MTE.Core.Models;
 
 namespace MTE.Engine.Engine;
@@ -28,8 +28,7 @@ public sealed class UserProfileDiscoveryService
                 profiles);
         }
 
-        var currentUser =
-            Environment.UserName;
+        var currentUser = Environment.UserName;
 
         foreach (var directory in
                  Directory.EnumerateDirectories(
@@ -62,11 +61,6 @@ public sealed class UserProfileDiscoveryService
                     "All Users",
                     StringComparison.OrdinalIgnoreCase);
 
-            var sizeBytes =
-                CalculateDirectorySize(
-                    directory,
-                    cancellationToken);
-
             profiles.Add(
                 new UserProfileInformation
                 {
@@ -74,7 +68,7 @@ public sealed class UserProfileDiscoveryService
 
                     ProfilePath = directory,
 
-                    SizeBytes = sizeBytes,
+                    SizeBytes = 0,
 
                     IsCurrentUser =
                         directoryName.Equals(
@@ -89,39 +83,5 @@ public sealed class UserProfileDiscoveryService
         return Task.FromResult<
             IReadOnlyList<UserProfileInformation>>(
             profiles);
-    }
-
-    private static long CalculateDirectorySize(
-        string directory,
-        CancellationToken cancellationToken)
-    {
-        long total = 0;
-
-        try
-        {
-            foreach (var file in
-                     Directory.EnumerateFiles(
-                         directory,
-                         "*",
-                         SearchOption.AllDirectories))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                try
-                {
-                    total += new FileInfo(file).Length;
-                }
-                catch
-                {
-                    // Ignore files that cannot be accessed.
-                }
-            }
-        }
-        catch
-        {
-            // Ignore directories that cannot be accessed.
-        }
-
-        return total;
     }
 }
