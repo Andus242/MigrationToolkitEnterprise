@@ -1,0 +1,202 @@
+﻿using System;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace MTE.Reporting;
+
+public sealed class MigrationReportService
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition =
+            JsonIgnoreCondition.WhenWritingNull
+    };
+
+    public string SaveJson(
+        MigrationReport report,
+        string migrationRoot)
+    {
+        if (report is null)
+            throw new ArgumentNullException(nameof(report));
+
+        if (string.IsNullOrWhiteSpace(migrationRoot))
+            throw new ArgumentException(
+                "Migration root is required.",
+                nameof(migrationRoot));
+
+        var reportsDirectory =
+            Path.Combine(migrationRoot, "Reports");
+
+        Directory.CreateDirectory(reportsDirectory);
+
+        var path =
+            Path.Combine(
+                reportsDirectory,
+                "MigrationReport.json");
+
+        var json =
+            JsonSerializer.Serialize(
+                report,
+                JsonOptions);
+
+        File.WriteAllText(path, json);
+
+        return path;
+    }
+
+    public string SaveHtml(
+        MigrationReport report,
+        string migrationRoot)
+    {
+        if (report is null)
+            throw new ArgumentNullException(nameof(report));
+
+        if (string.IsNullOrWhiteSpace(migrationRoot))
+            throw new ArgumentException(
+                "Migration root is required.",
+                nameof(migrationRoot));
+
+        var reportsDirectory =
+            Path.Combine(migrationRoot, "Reports");
+
+        Directory.CreateDirectory(reportsDirectory);
+
+        var path =
+            Path.Combine(
+                reportsDirectory,
+                "MigrationReport.html");
+
+        var completed =
+            report.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss")
+            ?? "In progress";
+
+        var duration =
+            report.CompletedAt.HasValue
+                ? report.CompletedAt.Value - report.StartedAt
+                : TimeSpan.Zero;
+
+        var html = $"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MTE Migration Report</title>
+<style>
+body {{
+    font-family: Arial, sans-serif;
+    margin: 40px;
+    background: #f5f5f5;
+    color: #222;
+}}
+
+.container {{
+    max-width: 1100px;
+    margin: auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+}}
+
+h1 {{
+    margin-top: 0;
+}}
+
+table {{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}}
+
+th, td {{
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}}
+
+th {{
+    background: #eee;
+}}
+
+.status {{
+    font-size: 20px;
+    font-weight: bold;
+}}
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>MTE Migration Report</h1>
+
+<p class="status">Status: {Escape(report.Status)}</p>
+
+<table>
+<tr><th>Migration ID</th><td>{Escape(report.MigrationId)}</td></tr>
+<tr><th>Computer</th><td>{Escape(report.ComputerName)}</td></tr>
+<tr><th>Destination</th><td>{Escape(report.Destination)}</td></tr>
+<tr><th>Migration Mode</th><td>{Escape(report.MigrationMode)}</td></tr>
+<tr><th>Started</th><td>{Escape(report.StartedAt.ToString("yyyy-MM-dd HH:mm:ss"))}</td></tr>
+<tr><th>Completed</th><td>{Escape(completed)}</td></tr>
+<tr><th>Duration</th><td>{Escape(duration.ToString())}</td></tr>
+</table>
+
+<h2>Migration Summary</h2>
+
+<table>
+<tr><th>Metric</th><th>Value</th></tr>
+<tr><td>Total Files</td><td>{report.TotalFiles:N0}</td></tr>
+<tr><td>Total Bytes</td><td>{report.TotalBytes:N0}</td></tr>
+<tr><td>Copied Files</td><td>{report.CopiedFiles:N0}</td></tr>
+<tr><td>Copied Bytes</td><td>{report.CopiedBytes:N0}</td></tr>
+<tr><td>Verified Files</td><td>{report.VerifiedFiles:N0}</td></tr>
+<tr><td>Failed Files</td><td>{report.FailedFiles:N0}</td></tr>
+<tr><td>Skipped Files</td><td>{report.SkippedFiles:N0}</td></tr>
+</table>
+
+<h2>Selected Profiles</h2>
+
+<ul>
+{BuildList(report.SelectedProfiles)}
+</ul>
+
+<h2>Selected Folders</h2>
+
+<ul>
+{BuildList(report.SelectedFolders)}
+</ul>
+
+</div>
+</body>
+</html>
+""";
+
+        File.WriteAllText(path, html);
+
+        return path;
+    }
+
+    private static string BuildList(
+        System.Collections.Generic.IEnumerable<string> items)
+    {
+        var builder =
+            new System.Text.StringBuilder();
+
+        foreach (var item in items)
+        {
+            builder.Append("<li>");
+            builder.Append(Escape(item));
+            builder.Append("</li>");
+        }
+
+        return builder.ToString();
+    }
+
+    private static string Escape(string value)
+    {
+        return System.Net.WebUtility.HtmlEncode(
+            value ?? string.Empty);
+    }
+}
