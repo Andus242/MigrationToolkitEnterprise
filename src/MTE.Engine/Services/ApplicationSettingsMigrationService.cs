@@ -63,6 +63,7 @@ public sealed class ApplicationSettingsMigrationService
             var destinationFolder =
                 Path.Combine(
                     destinationProfile,
+                    "AppData",
                     folderName);
 
             if (!Directory.Exists(sourceFolder))
