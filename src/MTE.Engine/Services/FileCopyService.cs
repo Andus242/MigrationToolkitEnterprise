@@ -1,5 +1,6 @@
 using System.IO;
 using MTE.Core.Interfaces;
+using MTE.Core.Models;
 
 namespace MTE.Engine.Services;
 
@@ -47,6 +48,7 @@ public sealed class FileCopyService
 
         var copiedFiles = 0;
         var skippedFiles = 0;
+        var lastReportedProgress = 0;
 
         foreach (var sourceFile in files)
         {
@@ -66,16 +68,94 @@ public sealed class FileCopyService
                 Path.GetDirectoryName(destinationFile);
 
             if (!string.IsNullOrEmpty(destinationFolder))
+            {
                 Directory.CreateDirectory(destinationFolder);
+            }
 
             try
             {
+                var currentFileName =
+                    Path.GetFileName(sourceFile);
+
+                var fileProgress =
+                    new Progress<double>(percentage =>
+                    {
+                        var safeFilePercentage =
+                            Math.Clamp(
+                                percentage,
+                                0d,
+                                100d);
+
+                        var overallProgress =
+                            ((copiedFiles +
+                              safeFilePercentage / 100d +
+                              skippedFiles) /
+                             totalFiles) *
+                            100d;
+
+                        var reportedProgress =
+                            Math.Clamp(
+                                (int)Math.Round(overallProgress),
+                                0,
+                                99);
+
+                        if (reportedProgress < lastReportedProgress)
+                        {
+                            reportedProgress =
+                                lastReportedProgress;
+                        }
+                        else
+                        {
+                            lastReportedProgress =
+                                reportedProgress;
+                        }
+
+                        progress?.Report(new MigrationProgressInfo
+                        {
+                            Section = "Documents",
+                            Message =
+                                $"Copying: {relativePath}",
+                            Percentage = reportedProgress,
+                            IsComplete = false
+                        });
+                    });
+
                 await CopyFileAsync(
                     sourceFile,
                     destinationFile,
+                    fileProgress,
                     cancellationToken);
 
                 copiedFiles++;
+
+                var completedPercentage =
+                    Math.Clamp(
+                        (int)Math.Round(
+                            (copiedFiles + skippedFiles) *
+                            100.0 /
+                            totalFiles),
+                        0,
+                        99);
+
+                if (completedPercentage < lastReportedProgress)
+                {
+                    completedPercentage =
+                        lastReportedProgress;
+                }
+                else
+                {
+                    lastReportedProgress =
+                        completedPercentage;
+                }
+
+                progress?.Report(new MigrationProgressInfo
+                {
+                    Section = "Documents",
+                    Message =
+                        $"Copied {copiedFiles:N0} of {totalFiles:N0}: {currentFileName}",
+                    Percentage = completedPercentage,
+                    IsComplete = false
+                });
             }
             catch (OperationCanceledException)
             {
@@ -85,42 +165,44 @@ public sealed class FileCopyService
             {
                 skippedFiles++;
 
+                var failedPercentage =
+                    Math.Clamp(
+                        (int)Math.Round(
+                            (copiedFiles + skippedFiles) *
+                            100.0 /
+                            totalFiles),
+                        0,
+                        99);
+
+                if (failedPercentage < lastReportedProgress)
+                {
+                    failedPercentage =
+                        lastReportedProgress;
+                }
+                else
+                {
+                    lastReportedProgress =
+                        failedPercentage;
+                }
+
                 progress?.Report(new MigrationProgressInfo
                 {
                     Section = "Documents",
                     Message =
                         $"Skipped: {Path.GetFileName(sourceFile)} - {ex.Message}",
-                    Percentage =
-                        CalculatePercentage(
-                            copiedFiles,
-                            skippedFiles,
-                            totalFiles),
+                    Percentage = failedPercentage,
                     IsComplete = false
                 });
 
                 continue;
             }
-
-            progress?.Report(new MigrationProgressInfo
-            {
-                Section = "Documents",
-                Message =
-                    $"Copying {copiedFiles} of {totalFiles}: {Path.GetFileName(sourceFile)}",
-                Percentage =
-                    CalculatePercentage(
-                        copiedFiles,
-                        skippedFiles,
-                        totalFiles),
-                IsComplete =
-                    copiedFiles + skippedFiles >= totalFiles
-            });
         }
 
         progress?.Report(new MigrationProgressInfo
         {
             Section = "Documents",
             Message =
-                $"Documents complete. Copied: {copiedFiles}, Skipped: {skippedFiles}. OneDrive excluded.",
+                $"Documents complete. Copied: {copiedFiles:N0}, Skipped: {skippedFiles:N0}. OneDrive excluded.",
             Percentage = 100,
             IsComplete = true
         });
@@ -217,27 +299,23 @@ public sealed class FileCopyService
                 StringComparison.OrdinalIgnoreCase);
     }
 
-    private static int CalculatePercentage(
-        int copiedFiles,
-        int skippedFiles,
-        int totalFiles)
-    {
-        if (totalFiles <= 0)
-            return 100;
-
-        return Math.Min(
-            100,
-            (int)Math.Round(
-                (copiedFiles + skippedFiles) * 100.0 /
-                totalFiles));
-    }
-
     private static async Task CopyFileAsync(
         string sourceFile,
         string destinationFile,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         const int bufferSize = 1024 * 1024;
+
+        var fileInfo =
+            new FileInfo(sourceFile);
+
+        var totalBytes =
+            fileInfo.Length;
+
+        long bytesCopied = 0;
+
+        progress?.Report(0);
 
         await using var source =
             new FileStream(
@@ -259,9 +337,42 @@ public sealed class FileCopyService
                 FileOptions.Asynchronous |
                 FileOptions.SequentialScan);
 
-        await source.CopyToAsync(
-            destination,
-            bufferSize,
+        var buffer =
+            new byte[bufferSize];
+
+        int bytesRead;
+
+        while ((bytesRead =
+            await source.ReadAsync(
+                buffer.AsMemory(
+                    0,
+                    buffer.Length),
+                cancellationToken)) > 0)
+        {
+            await destination.WriteAsync(
+                buffer.AsMemory(
+                    0,
+                    bytesRead),
+                cancellationToken);
+
+            bytesCopied += bytesRead;
+
+            var percentage =
+                totalBytes == 0
+                    ? 100d
+                    : (double)bytesCopied /
+                      totalBytes *
+                      100d;
+
+            progress?.Report(
+                Math.Min(
+                    100d,
+                    percentage));
+        }
+
+        await destination.FlushAsync(
             cancellationToken);
+
+        progress?.Report(100);
     }
 }
