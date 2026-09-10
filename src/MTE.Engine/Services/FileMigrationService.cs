@@ -34,6 +34,8 @@ public sealed class FileMigrationService
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        string? temporaryPath = null;
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -59,6 +61,14 @@ public sealed class FileMigrationService
             _logger.Info(
                 $"Copying: {sourcePath} -> {destinationPath}");
 
+            temporaryPath =
+                Path.Combine(
+                    destinationDirectory!,
+                    "." +
+                    Path.GetFileName(destinationPath) +
+                    ".mte-temp-" +
+                    Guid.NewGuid().ToString("N"));
+
             await using (var sourceStream = new FileStream(
                 sourcePath,
                 FileMode.Open,
@@ -69,8 +79,8 @@ public sealed class FileMigrationService
             {
                 await using var destinationStream =
                     new FileStream(
-                        destinationPath,
-                        FileMode.Create,
+                        temporaryPath,
+                        FileMode.CreateNew,
                         FileAccess.Write,
                         FileShare.None,
                         bufferSize: 1024 * 64,
@@ -109,25 +119,54 @@ public sealed class FileMigrationService
             var result =
                 await _verificationService.VerifyFileAsync(
                     sourcePath,
-                    destinationPath,
+                    temporaryPath,
                     cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (result.Verified)
-            {
-                progress?.Report(100);
-
-                _logger.Success(
-                    $"Verified: {destinationPath}");
-            }
-            else
+            if (!result.Verified)
             {
                 _logger.Error(
                     $"Verification failed: {destinationPath}");
+
+                return new VerificationResult
+                {
+                    SourcePath = sourcePath,
+                    DestinationPath = destinationPath,
+                    FileSize = result.FileSize,
+                    SourceHash = result.SourceHash,
+                    DestinationHash = result.DestinationHash,
+                    Exists = result.Exists,
+                    HashMatches = result.HashMatches,
+                    Timestamp = result.Timestamp
+                };
             }
 
-            return result;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            File.Move(
+                temporaryPath,
+                destinationPath,
+                true);
+
+            temporaryPath = null;
+
+            progress?.Report(100);
+
+            _logger.Success(
+                $"Verified: {destinationPath}");
+
+            return new VerificationResult
+            {
+                SourcePath = sourcePath,
+                DestinationPath = destinationPath,
+                FileSize = result.FileSize,
+                SourceHash = result.SourceHash,
+                DestinationHash = result.DestinationHash,
+                Exists = true,
+                HashMatches = true,
+                Timestamp = DateTime.Now
+            };
         }
         catch (OperationCanceledException)
         {
@@ -142,6 +181,26 @@ public sealed class FileMigrationService
                 $"Copy failed: {sourcePath} - {ex.Message}");
 
             throw;
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(temporaryPath))
+            {
+                try
+                {
+                    if (File.Exists(temporaryPath))
+                    {
+                        File.Delete(temporaryPath);
+                    }
+                }
+                catch (Exception cleanupException)
+                {
+                    _logger.Warning(
+                        $"Could not clean up temporary file " +
+                        $"{temporaryPath}: " +
+                        $"{cleanupException.Message}");
+                }
+            }
         }
     }
 }
