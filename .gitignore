@@ -39,3 +39,6 @@ TestResults/
 # Build logs
 *.log
 
+
+# Track MTE WPF application source (directory name ends with .App)
+!src/MTE.App/
