@@ -1,4 +1,4 @@
-using MTE.Core.Interfaces;
+﻿using MTE.Core.Interfaces;
 using MTE.Core.Models;
 
 namespace MTE.Engine.Services;
@@ -57,6 +57,7 @@ public sealed class FileMigrationService
                 fileInfo.Length;
 
             long bytesCopied = 0;
+            int lastReportedPercentage = -1;
 
             _logger.Info(
                 $"Copying: {sourcePath} -> {destinationPath}");
@@ -106,8 +107,14 @@ public sealed class FileMigrationService
                             ? 100
                             : (double)bytesCopied / totalBytes * 100;
 
-                    progress?.Report(
-                        Math.Min(100, percentage));
+                    var reportedPercentage =
+                        Math.Clamp((int)percentage, 0, 100);
+
+                    if (reportedPercentage != lastReportedPercentage)
+                    {
+                        lastReportedPercentage = reportedPercentage;
+                        progress?.Report(reportedPercentage);
+                    }
                 }
 
                 await destinationStream.FlushAsync(

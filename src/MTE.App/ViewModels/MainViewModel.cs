@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -1039,6 +1039,16 @@ public MigrationDestination? SelectedDestination
                 new Progress<MigrationProgressInfo>(
                     info =>
                     {
+                        try
+                        {
+                            File.AppendAllText(
+                                @"C:\MTE-Progress-Debug.txt",
+                                $"{DateTime.Now:HH:mm:ss.fff} - CALLBACK: Section={info.Section}, Percentage={info.Percentage}, Complete={info.IsComplete}, Message={info.Message}{Environment.NewLine}");
+                        }
+                        catch
+                        {
+                        }
+
                         if (!IsCurrentProgressOperation(
                                 migrationProgressGeneration))
                         {
@@ -1089,12 +1099,12 @@ public MigrationDestination? SelectedDestination
                         })
                     .ToList();
 
-            await _migrationEngine.ExecuteAsync(
-                destination.DriveLetter,
-                selectedProfiles,
-                progress,
-                cancellationTokenSource.Token);
-
+            var migrationResult =
+                await _migrationEngine.ExecuteAsync(
+                    destination.DriveLetter,
+                    selectedProfiles,
+                    progress,
+                    cancellationTokenSource.Token);
             var migrationRoot =
                 Path.Combine(
                     destination.DriveLetter.TrimEnd('\\'),
@@ -1113,6 +1123,12 @@ public MigrationDestination? SelectedDestination
                                 profile.SelectedFolders is not null)
                             ? "Selected Folders"
                             : "Whole Profile",
+                    TotalFiles = migrationResult.TotalFiles,
+                    TotalBytes = migrationResult.TotalBytes,
+                    CopiedFiles = migrationResult.CopiedFiles,
+                    CopiedBytes = migrationResult.CopiedBytes,
+                    VerifiedFiles = migrationResult.VerifiedFiles,
+                    FailedFiles = migrationResult.FailedFiles,
                     SelectedProfiles =
                         selectedProfiles
                             .Select(profile =>
@@ -1126,6 +1142,17 @@ public MigrationDestination? SelectedDestination
                                 profile.SelectedFolders!)
                             .Distinct(
                                 StringComparer.OrdinalIgnoreCase)
+                            .ToList(),
+                    Sections =
+                        migrationResult.Sections
+                            .Select(section =>
+                                new MigrationSectionResult
+                                {
+                                    Section = section.Section,
+                                    Success = section.Success,
+                                    Message = section.Message,
+                                    Timestamp = section.Timestamp
+                                })
                             .ToList()
                 };
 
@@ -1389,6 +1416,7 @@ public sealed class RelayCommand : ICommand
             EventArgs.Empty);
     }
 }
+
 
 
 

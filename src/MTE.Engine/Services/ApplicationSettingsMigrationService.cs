@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MTE.Core.Interfaces;
+using MTE.Core.Models;
 
 namespace MTE.Engine.Services;
 
@@ -21,12 +22,13 @@ public sealed class ApplicationSettingsMigrationService
         _logger = logger;
     }
 
-    public async Task MigrateProfileSettingsAsync(
+    public async Task<List<VerificationResult>> MigrateProfileSettingsAsync(
         string sourceProfile,
         string destinationProfile,
         IProgress<MigrationProgressInfo>? progress,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
         if (string.IsNullOrWhiteSpace(sourceProfile))
             throw new ArgumentException(
                 "Source profile is required.",
@@ -37,7 +39,7 @@ public sealed class ApplicationSettingsMigrationService
             _logger.Warning(
                 $"Application settings source profile not found: {sourceProfile}");
 
-            return;
+            return results;
         }
 
         Directory.CreateDirectory(destinationProfile);
@@ -91,6 +93,7 @@ public sealed class ApplicationSettingsMigrationService
 
             var totalFiles = files.Count;
             var completedFiles = 0;
+            var lastReportedPercentage = -1;
 
             foreach (var sourceFile in files)
             {
@@ -114,6 +117,8 @@ public sealed class ApplicationSettingsMigrationService
                             destinationFile,
                             cancellationToken);
 
+                    results.Add(result);
+
                     completedFiles++;
 
                     var percentage =
@@ -121,21 +126,29 @@ public sealed class ApplicationSettingsMigrationService
                             ? completedFiles * 100.0 / totalFiles
                             : 100;
 
-                    progress?.Report(
-                        new MigrationProgressInfo
-                        {
-                            Section = "Applications",
-                            Message =
-                                $"Migrating application settings: " +
-                                $"{folderName}\\{relativePath}",
-                            Percentage =
-                                Math.Min(
-                                    50,
-                                    38 +
-                                    (int)Math.Round(
-                                        percentage * 0.12)),
-                            IsComplete = false
-                        });
+
+                    var reportedPercentage =
+                        Math.Min(
+                            50,
+                            38 +
+                            (int)Math.Round(
+                                percentage * 0.12));
+
+                    if (reportedPercentage != lastReportedPercentage)
+                    {
+                        lastReportedPercentage = reportedPercentage;
+
+                        progress?.Report(
+                            new MigrationProgressInfo
+                            {
+                                Section = "Applications",
+                                Message =
+                                    $"Migrating application settings: " +
+                                    $"{folderName}\\{relativePath}",
+                                Percentage = reportedPercentage,
+                                IsComplete = false
+                            });
+                    }
 
                     if (!result.Verified)
                     {
@@ -169,12 +182,15 @@ public sealed class ApplicationSettingsMigrationService
                 Percentage = 50,
                 IsComplete = false
             });
+
+        return results;
     }
 
     private static List<string> GetFilesExcludingCache(
         string rootDirectory,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
         var files = new List<string>();
 
         ScanDirectory(
@@ -190,6 +206,7 @@ public sealed class ApplicationSettingsMigrationService
         List<string> files,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
         cancellationToken.ThrowIfCancellationRequested();
 
         DirectoryInfo info;
@@ -290,3 +307,14 @@ public sealed class ApplicationSettingsMigrationService
                    StringComparison.OrdinalIgnoreCase);
     }
 }
+
+
+
+
+
+
+
+
+
+
+

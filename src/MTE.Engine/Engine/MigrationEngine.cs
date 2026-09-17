@@ -34,7 +34,7 @@ public sealed class MigrationEngine : IMigrationEngine
         _migrationStorageService = migrationStorageService;
     }
 
-    public async Task ExecuteAsync(
+    public async Task<MigrationExecutionResult> ExecuteAsync(
         string destinationDrive,
         IReadOnlyList<MigrationProfileSelection> selectedProfiles,
         IProgress<MigrationProgressInfo> progress,
@@ -52,6 +52,8 @@ public sealed class MigrationEngine : IMigrationEngine
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            var executionResult = new MigrationExecutionResult();
 
             var lastReportedPercentage = 0;
 
@@ -120,6 +122,15 @@ public sealed class MigrationEngine : IMigrationEngine
                 "System Discovery",
                 "System discovery completed.",
                 20);
+
+            executionResult.Sections.Add(
+                new MigrationSectionResult
+                {
+                    Section = "System Discovery",
+                    Success = true,
+                    Message = "System discovery completed.",
+                    Timestamp = DateTime.Now
+                });
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -202,19 +213,32 @@ public sealed class MigrationEngine : IMigrationEngine
                                     overallPercentage));
                         });
 
-                    await _userProfileMigrationService
-                        .CopyUserProfileAsync(
-                            profile.ProfilePath,
-                            destinationProfile,
-                            profileSelection.SelectedFolders,
-                            profileProgress,
-                            cancellationToken);
+                    var profileResults =
+                        await _userProfileMigrationService
+                            .CopyUserProfileAsync(
+                                profile.ProfilePath,
+                                destinationProfile,
+                                profileSelection.SelectedFolders,
+                                profileProgress,
+                                cancellationToken);
+
+                    executionResult.FileResults.AddRange(
+                        profileResults);
                 }
 
                 ReportOverallProgress(
                     "User Profiles",
                     "User profile migration completed and files verified.",
                     40);
+
+                executionResult.Sections.Add(
+                    new MigrationSectionResult
+                    {
+                        Section = "User Profiles",
+                        Success = true,
+                        Message = "User profile migration completed and files verified.",
+                        Timestamp = DateTime.Now
+                    });
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -286,18 +310,31 @@ public sealed class MigrationEngine : IMigrationEngine
                                     end));
                         });
 
-                    await _applicationSettingsMigrationService
-                        .MigrateProfileSettingsAsync(
-                            profile.ProfilePath,
-                            applicationDestination,
-                            applicationProgress,
-                            cancellationToken);
+                    var applicationResults =
+                        await _applicationSettingsMigrationService
+                            .MigrateProfileSettingsAsync(
+                                profile.ProfilePath,
+                                applicationDestination,
+                                applicationProgress,
+                                cancellationToken);
+
+                    executionResult.FileResults.AddRange(
+                        applicationResults);
                 }
 
                 ReportOverallProgress(
                     "Applications",
                     "Application settings migration completed and files verified.",
                     55);
+
+                executionResult.Sections.Add(
+                    new MigrationSectionResult
+                    {
+                        Section = "Applications",
+                        Success = true,
+                        Message = "Application settings migration completed and files verified.",
+                        Timestamp = DateTime.Now
+                    });
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -369,18 +406,31 @@ public sealed class MigrationEngine : IMigrationEngine
                                     end));
                         });
 
-                    await _browserDataMigrationService
-                        .MigrateProfileBrowsersAsync(
-                            profile.ProfilePath,
-                            browserDestination,
-                            browserProgress,
-                            cancellationToken);
+                    var browserResults =
+                        await _browserDataMigrationService
+                            .MigrateProfileBrowsersAsync(
+                                profile.ProfilePath,
+                                browserDestination,
+                                browserProgress,
+                                cancellationToken);
+
+                    executionResult.FileResults.AddRange(
+                        browserResults);
                 }
 
                 ReportOverallProgress(
                     "Browsers",
                     "Browser data migration completed and files verified.",
                     70);
+
+                executionResult.Sections.Add(
+                    new MigrationSectionResult
+                    {
+                        Section = "Browsers",
+                        Success = true,
+                        Message = "Browser data migration completed and files verified.",
+                        Timestamp = DateTime.Now
+                    });
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -403,6 +453,15 @@ public sealed class MigrationEngine : IMigrationEngine
                 "Network migration stage ready.",
                 80);
 
+            executionResult.Sections.Add(
+                new MigrationSectionResult
+                {
+                    Section = "Network",
+                    Success = true,
+                    Message = "Network migration stage ready.",
+                    Timestamp = DateTime.Now
+                });
+
             cancellationToken.ThrowIfCancellationRequested();
 
             // ---------------------------------------------------------
@@ -423,6 +482,15 @@ public sealed class MigrationEngine : IMigrationEngine
                 "Migration data prepared successfully.",
                 95);
 
+            executionResult.Sections.Add(
+                new MigrationSectionResult
+                {
+                    Section = "Finalization",
+                    Success = true,
+                    Message = "Migration data prepared successfully.",
+                    Timestamp = DateTime.Now
+                });
+
             cancellationToken.ThrowIfCancellationRequested();
 
             // ---------------------------------------------------------
@@ -435,9 +503,20 @@ public sealed class MigrationEngine : IMigrationEngine
                 100,
                 true);
 
+            executionResult.Sections.Add(
+                new MigrationSectionResult
+                {
+                    Section = "Complete",
+                    Success = true,
+                    Message = "Migration completed successfully.",
+                    Timestamp = DateTime.Now
+                });
+
             _logger.Success(
                 $"Migration engine completed successfully. " +
                 $"Migration root: {migrationRoot}");
+
+            return executionResult;
         }
         catch (OperationCanceledException)
         {
@@ -471,6 +550,12 @@ public sealed class MigrationEngine : IMigrationEngine
             });
     }
 }
+
+
+
+
+
+
 
 
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MTE.Core.Interfaces;
+using MTE.Core.Models;
 
 namespace MTE.Engine.Services;
 
@@ -21,13 +22,15 @@ public sealed class UserProfileMigrationService
         _logger = logger;
     }
 
-    public async Task CopyUserProfileAsync(
+    public async Task<List<VerificationResult>> CopyUserProfileAsync(
         string sourceProfile,
         string destinationProfile,
         IReadOnlyList<string>? selectedFolders,
         IProgress<MigrationProgressInfo>? progress,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
+
         if (string.IsNullOrWhiteSpace(sourceProfile))
         {
             throw new ArgumentException(
@@ -48,7 +51,7 @@ public sealed class UserProfileMigrationService
                 IsComplete = true
             });
 
-            return;
+            return results;
         }
 
         Directory.CreateDirectory(destinationProfile);
@@ -57,29 +60,39 @@ public sealed class UserProfileMigrationService
         // An empty list means "Selected Folders" with nothing selected.
         if (selectedFolders is null)
         {
-            await CopyWholeProfileAsync(
+            var wholeProfileResults =
+                await CopyWholeProfileAsync(
+                    sourceProfile,
+                    destinationProfile,
+                    progress,
+                    cancellationToken);
+
+            results.AddRange(wholeProfileResults);
+
+            return results;
+        }
+
+        var selectedFolderResults =
+            await CopySelectedFoldersAsync(
                 sourceProfile,
                 destinationProfile,
+                selectedFolders,
                 progress,
                 cancellationToken);
 
-            return;
-        }
+        results.AddRange(selectedFolderResults);
 
-        await CopySelectedFoldersAsync(
-            sourceProfile,
-            destinationProfile,
-            selectedFolders,
-            progress,
-            cancellationToken);
+        return results;
     }
 
-    private async Task CopyWholeProfileAsync(
+    private async Task<List<VerificationResult>> CopyWholeProfileAsync(
         string sourceProfile,
         string destinationProfile,
         IProgress<MigrationProgressInfo>? progress,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
+
         progress?.Report(new MigrationProgressInfo
         {
             Section = "User Profiles",
@@ -109,7 +122,7 @@ public sealed class UserProfileMigrationService
             _logger.Warning(
                 $"No eligible profile files found in: {sourceProfile}");
 
-            return;
+            return results;
         }
 
         progress?.Report(new MigrationProgressInfo
@@ -169,18 +182,19 @@ public sealed class UserProfileMigrationService
                                 0,
                                 99);
 
+                        
                         if (reportedProgress < lastReportedProgress)
                         {
                             reportedProgress =
                                 lastReportedProgress;
                         }
-                        else
+
+                        if (reportedProgress != lastReportedProgress)
                         {
                             lastReportedProgress =
                                 reportedProgress;
-                        }
 
-                        progress?.Report(new MigrationProgressInfo
+                            progress?.Report(new MigrationProgressInfo
                         {
                             Section = "User Profiles",
                             Message =
@@ -188,6 +202,7 @@ public sealed class UserProfileMigrationService
                             Percentage = reportedProgress,
                             IsComplete = false
                         });
+                        }
                     });
 
                 var result =
@@ -196,6 +211,8 @@ public sealed class UserProfileMigrationService
                         destinationFile,
                         fileProgress,
                         cancellationToken);
+
+                results.Add(result);
 
                 completedFiles++;
 
@@ -206,15 +223,11 @@ public sealed class UserProfileMigrationService
                         0,
                         99);
 
+                
                 if (completedPercentage < lastReportedProgress)
                 {
                     completedPercentage =
                         lastReportedProgress;
-                }
-                else
-                {
-                    lastReportedProgress =
-                        completedPercentage;
                 }
 
                 var verificationText =
@@ -222,16 +235,22 @@ public sealed class UserProfileMigrationService
                         ? "Verified"
                         : "Verification failed";
 
-                progress?.Report(new MigrationProgressInfo
+                if (completedPercentage != lastReportedProgress)
                 {
-                    Section = "User Profiles",
-                    Message =
-                        $"{verificationText} " +
-                        $"{completedFiles:N0}/{totalFiles:N0}: " +
-                        $"{relativePath}",
-                    Percentage = completedPercentage,
-                    IsComplete = false
-                });
+                    lastReportedProgress =
+                        completedPercentage;
+
+                    progress?.Report(new MigrationProgressInfo
+                    {
+                        Section = "User Profiles",
+                        Message =
+                            $"{verificationText} " +
+                            $"{completedFiles:N0}/{totalFiles:N0}: " +
+                            $"{relativePath}",
+                        Percentage = completedPercentage,
+                        IsComplete = false
+                    });
+                }
 
                 if (!result.Verified)
                 {
@@ -292,15 +311,19 @@ public sealed class UserProfileMigrationService
 
         _logger.Success(
             $"Whole user profile migration completed: {sourceProfile}");
+
+        return results;
     }
 
-    private async Task CopySelectedFoldersAsync(
+    private async Task<List<VerificationResult>> CopySelectedFoldersAsync(
         string sourceProfile,
         string destinationProfile,
         IReadOnlyList<string> selectedFolders,
         IProgress<MigrationProgressInfo>? progress,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
+
         var standardFolders = new[]
         {
             "Desktop",
@@ -340,7 +363,7 @@ public sealed class UserProfileMigrationService
             _logger.Warning(
                 $"No selected user folders found in: {sourceProfile}");
 
-            return;
+            return results;
         }
 
         for (var index = 0;
@@ -372,14 +395,17 @@ public sealed class UserProfileMigrationService
                 $"Preparing {folder}...",
                 false);
 
-            await CopyFolderAsync(
-                sourceFolder,
-                destinationFolder,
-                folder,
-                progress,
-                index,
-                availableFolders.Count,
-                cancellationToken);
+            var folderResults =
+                await CopyFolderAsync(
+                    sourceFolder,
+                    destinationFolder,
+                    folder,
+                    progress,
+                    index,
+                    availableFolders.Count,
+                    cancellationToken);
+
+            results.AddRange(folderResults);
         }
 
         progress?.Report(new MigrationProgressInfo
@@ -393,9 +419,11 @@ public sealed class UserProfileMigrationService
 
         _logger.Success(
             $"Selected user folders migration completed: {sourceProfile}");
+
+        return results;
     }
 
-    private async Task CopyFolderAsync(
+    private async Task<List<VerificationResult>> CopyFolderAsync(
         string sourceFolder,
         string destinationFolder,
         string folderName,
@@ -404,6 +432,8 @@ public sealed class UserProfileMigrationService
         int folderCount,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
+
         Directory.CreateDirectory(destinationFolder);
 
         var files =
@@ -426,7 +456,7 @@ public sealed class UserProfileMigrationService
                 $"{folderName} is empty - nothing to copy.",
                 false);
 
-            return;
+            return results;
         }
 
         ReportFolderProgress(
@@ -520,6 +550,8 @@ public sealed class UserProfileMigrationService
                         destinationFile,
                         fileProgress,
                         cancellationToken);
+
+                results.Add(result);
 
                 completedFiles++;
 
@@ -629,6 +661,8 @@ public sealed class UserProfileMigrationService
             100,
             $"{folderName} completed and files verified.",
             false);
+
+        return results;
     }
 
     private static void ReportFolderProgress(
@@ -947,3 +981,25 @@ public sealed class UserProfileMigrationService
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

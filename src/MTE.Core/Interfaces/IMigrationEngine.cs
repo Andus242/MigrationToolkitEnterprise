@@ -1,10 +1,10 @@
-﻿using MTE.Core.Models;
+using MTE.Core.Models;
 
 namespace MTE.Core.Interfaces;
 
 public interface IMigrationEngine
 {
-    Task ExecuteAsync(
+    Task<MigrationExecutionResult> ExecuteAsync(
         string destinationDrive,
         IReadOnlyList<MigrationProfileSelection> selectedProfiles,
         IProgress<MigrationProgressInfo> progress,

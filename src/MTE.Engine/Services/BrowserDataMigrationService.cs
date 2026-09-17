@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MTE.Core.Interfaces;
+using MTE.Core.Models;
 
 namespace MTE.Engine.Services;
 
@@ -21,12 +22,13 @@ public sealed class BrowserDataMigrationService
         _logger = logger;
     }
 
-    public async Task MigrateProfileBrowsersAsync(
+    public async Task<List<VerificationResult>> MigrateProfileBrowsersAsync(
         string sourceProfile,
         string destinationProfile,
         IProgress<MigrationProgressInfo>? progress,
         CancellationToken cancellationToken)
     {
+        var results = new List<VerificationResult>();
         if (string.IsNullOrWhiteSpace(sourceProfile))
             throw new ArgumentException(
                 "Source profile is required.",
@@ -37,7 +39,7 @@ public sealed class BrowserDataMigrationService
             _logger.Warning(
                 $"Browser source profile not found: {sourceProfile}");
 
-            return;
+            return results;
         }
 
         Directory.CreateDirectory(destinationProfile);
@@ -94,7 +96,7 @@ public sealed class BrowserDataMigrationService
             _logger.Info(
                 $"No supported browser profiles found for: {sourceProfile}");
 
-            return;
+            return results;
         }
 
         for (var index = 0;
@@ -141,6 +143,7 @@ public sealed class BrowserDataMigrationService
             var totalFiles = files.Count;
             var completedFiles = 0;
 
+            var lastReportedPercentage = -1;
             foreach (var sourceFile in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -178,21 +181,31 @@ public sealed class BrowserDataMigrationService
                              availableBrowsers.Count /
                              100.0));
 
-                    progress?.Report(
-                        new MigrationProgressInfo
-                        {
-                            Section = "Browsers",
-                            Message =
-                                $"Verified {browser.Name}: " +
-                                $"{relativePath}",
-                            Percentage =
-                                Math.Min(
-                                    60,
-                                    Math.Max(
-                                        browserStart,
-                                        overallPercentage)),
-                            IsComplete = false
-                        });
+
+                    var reportedPercentage =
+                        Math.Min(
+                            60,
+                            Math.Max(
+                                browserStart,
+                                overallPercentage));
+
+                    if (reportedPercentage != lastReportedPercentage)
+                    {
+                        lastReportedPercentage =
+                            reportedPercentage;
+
+                        progress?.Report(
+                            new MigrationProgressInfo
+                            {
+                                Section = "Browsers",
+                                Message =
+                                    $"Verified {browser.Name}: " +
+                                    $"{relativePath}",
+                                Percentage =
+                                    reportedPercentage,
+                                IsComplete = false
+                            });
+                    }
 
                     if (!result.Verified)
                     {
@@ -228,6 +241,7 @@ public sealed class BrowserDataMigrationService
                 Percentage = 60,
                 IsComplete = false
             });
+        return results;
     }
 
     private static List<string> GetBrowserFiles(
@@ -353,3 +367,6 @@ public sealed class BrowserDataMigrationService
         string Name,
         string RelativePath);
 }
+
+
+
