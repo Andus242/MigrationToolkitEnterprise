@@ -45,3 +45,6 @@ TestResults/
 
 # Local safety backups
 *.bak
+
+# Local stable backups
+MTE-Stable-*/
