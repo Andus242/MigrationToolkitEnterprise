@@ -33,6 +33,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     private bool _verifyBeforeMigration = true;
     private bool _operationRunning;
+
+    private long _migrationTotalFiles;
+    private long _migrationTotalBytes;
+    private long _migrationCopiedFiles;
+    private long _migrationCopiedBytes;
+    private long _migrationVerifiedFiles;
+    private long _migrationFailedFiles;
+
     public MainViewModel(
         DriveDetectionService driveDetectionService,
         IUserProfileDiscoveryService userProfileDiscoveryService,
@@ -217,6 +225,30 @@ public MigrationDestination? SelectedDestination
             }
         }
     }
+
+    public long MigrationTotalFiles =>
+        _migrationTotalFiles;
+
+    public long MigrationTotalBytes =>
+        _migrationTotalBytes;
+
+    public long MigrationCopiedFiles =>
+        _migrationCopiedFiles;
+
+    public long MigrationCopiedBytes =>
+        _migrationCopiedBytes;
+
+    public long MigrationVerifiedFiles =>
+        _migrationVerifiedFiles;
+
+    public long MigrationFailedFiles =>
+        _migrationFailedFiles;
+
+    public string MigrationTotalBytesDisplay =>
+        FormatSize(_migrationTotalBytes);
+
+    public string MigrationCopiedBytesDisplay =>
+        FormatSize(_migrationCopiedBytes);
 
     private long BeginProgressOperation()
     {
@@ -1105,6 +1137,22 @@ public MigrationDestination? SelectedDestination
                     selectedProfiles,
                     progress,
                     cancellationTokenSource.Token);
+
+            _migrationTotalFiles = migrationResult.TotalFiles;
+            _migrationTotalBytes = migrationResult.TotalBytes;
+            _migrationCopiedFiles = migrationResult.CopiedFiles;
+            _migrationCopiedBytes = migrationResult.CopiedBytes;
+            _migrationVerifiedFiles = migrationResult.VerifiedFiles;
+            _migrationFailedFiles = migrationResult.FailedFiles;
+
+            OnPropertyChanged(nameof(MigrationTotalFiles));
+            OnPropertyChanged(nameof(MigrationTotalBytes));
+            OnPropertyChanged(nameof(MigrationCopiedFiles));
+            OnPropertyChanged(nameof(MigrationCopiedBytes));
+            OnPropertyChanged(nameof(MigrationVerifiedFiles));
+            OnPropertyChanged(nameof(MigrationFailedFiles));
+            OnPropertyChanged(nameof(MigrationTotalBytesDisplay));
+            OnPropertyChanged(nameof(MigrationCopiedBytesDisplay));
             var migrationRoot =
                 Path.Combine(
                     destination.DriveLetter.TrimEnd('\\'),
@@ -1163,6 +1211,12 @@ public MigrationDestination? SelectedDestination
             _migrationReportService.SaveHtml(
                 report,
                 migrationRoot);
+
+            StatusMessage =
+                "Migration completed successfully.";
+
+            CurrentOperation =
+                "Migration completed successfully.";
         }
         catch (OperationCanceledException)
         {
@@ -1416,106 +1470,4 @@ public sealed class RelayCommand : ICommand
             EventArgs.Empty);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -283,6 +283,21 @@ public sealed class UserProfileMigrationService
                     lastReportedProgress =
                         failedPercentage;
                 }
+
+                results.Add(
+                    new VerificationResult
+                    {
+                        SourcePath = sourceFile,
+                        DestinationPath = destinationFile,
+                        FileSize =
+                            File.Exists(sourceFile)
+                                ? new FileInfo(sourceFile).Length
+                                : 0,
+                        Exists = false,
+                        HashMatches = false,
+                        Skipped = true,
+                        Timestamp = DateTime.Now
+                    });
 
                 progress?.Report(new MigrationProgressInfo
                 {
@@ -636,6 +651,21 @@ public sealed class UserProfileMigrationService
                     lastReportedProgress =
                         failedReportedProgress;
                 }
+
+                results.Add(
+                    new VerificationResult
+                    {
+                        SourcePath = sourceFile,
+                        DestinationPath = destinationFile,
+                        FileSize =
+                            File.Exists(sourceFile)
+                                ? new FileInfo(sourceFile).Length
+                                : 0,
+                        Exists = false,
+                        HashMatches = false,
+                        Skipped = true,
+                        Timestamp = DateTime.Now
+                    });
 
                 progress?.Report(new MigrationProgressInfo
                 {

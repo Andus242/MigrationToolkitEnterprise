@@ -16,12 +16,15 @@ public sealed class VerificationResult
 
     public bool HashMatches { get; init; }
 
+    public bool Skipped { get; init; }
+
     public bool Verified => Exists && HashMatches;
 
     public DateTime Timestamp { get; init; } = DateTime.Now;
 
     public string Status =>
         Verified ? "Verified" :
+        Skipped ? "Skipped" :
         !Exists ? "Missing" :
         "Failed";
 }

@@ -27,5 +27,8 @@ public sealed class MigrationExecutionResult
         FileResults.Count(result => result.Verified);
 
     public int FailedFiles =>
-        FileResults.Count(result => !result.Verified);
+        FileResults.Count(result => !result.Verified && !result.Skipped);
+
+    public int SkippedFiles =>
+        FileResults.Count(result => result.Skipped);
 }

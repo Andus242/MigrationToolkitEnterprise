@@ -42,3 +42,6 @@ TestResults/
 
 # Track MTE WPF application source (directory name ends with .App)
 !src/MTE.App/
+
+# Local safety backups
+*.bak
