@@ -166,6 +166,7 @@ public sealed class BrowserDataMigrationService
                             destinationFile,
                             cancellationToken);
 
+                    results.Add(result);
                     completedFiles++;
 
                     var localPercentage =
@@ -220,6 +221,24 @@ public sealed class BrowserDataMigrationService
                 }
                 catch (Exception ex)
                 {
+                    completedFiles++;
+
+                    results.Add(
+                        new VerificationResult
+                        {
+                            SourcePath = sourceFile,
+                            DestinationPath = destinationFile,
+                            FileSize =
+                                File.Exists(sourceFile)
+                                    ? new FileInfo(sourceFile).Length
+                                    : 0,
+                            Exists = false,
+                            HashMatches = false,
+                            Skipped = true,
+                            Timestamp = DateTime.Now
+                        });
+
+
                     _logger.Warning(
                         $"Skipped browser file " +
                         $"{sourceFile}: {ex.Message}");
