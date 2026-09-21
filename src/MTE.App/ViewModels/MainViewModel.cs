@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -59,7 +59,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             new RelayCommand(
                 RefreshDrives);
 
-        
+
         DiscoverProfilesCommand =
             new RelayCommand(
                 () => _ = DiscoverProfilesAsync(),
@@ -96,7 +96,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 CancelMigration,
                 CanCancelOperation);
 
-        RefreshDrives();
+
 
     }
 
@@ -335,36 +335,6 @@ public MigrationDestination? SelectedDestination
                 "Calculating profile sizes...";
 
             await CalculateProfileSizesAsync();
-
-            var availableDebug =
-                AvailableProfiles
-                    .FirstOrDefault(p => p.UserName.Equals(
-                        Environment.UserName,
-                        StringComparison.OrdinalIgnoreCase));
-
-            var selectedDebug =
-                SelectedProfiles
-                    .FirstOrDefault(p => p.UserName.Equals(
-                        Environment.UserName,
-                        StringComparison.OrdinalIgnoreCase));
-
-            var refDebug =
-                $"Available={(availableDebug is null ? "NULL" : availableDebug.SizeBytes.ToString("N0"))}, " +
-                $"Selected={(selectedDebug is null ? "NULL" : selectedDebug.SizeBytes.ToString("N0"))}, " +
-                $"SameRef={ReferenceEquals(availableDebug, selectedDebug)}, " +
-                $"SelectedCount={SelectedProfiles.Count}, " +
-                $"OperationRunning={_operationRunning}, " +
-                $"CanStartMigration={CanStartMigration()}, " +
-                $"CanRunVerification={CanRunVerification()}";
-
-            File.WriteAllText(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    "MTE-REF-DEBUG.txt"),
-                refDebug);
-
-            StatusMessage = $"REF DEBUG: {refDebug}";
-
             CurrentOperation =
                 "Select the profiles to migrate";
 
@@ -385,18 +355,6 @@ public MigrationDestination? SelectedDestination
         finally
         {
             _operationRunning = false;
-
-            var finalCommandDebug =
-                $"SelectedProfiles={SelectedProfiles.Count}, " +
-                $"OperationRunning={_operationRunning}, " +
-                $"CanStartMigration={CanStartMigration()}, " +
-                $"CanRunVerification={CanRunVerification()}";
-
-            File.WriteAllText(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    "MTE-FINAL-COMMAND-DEBUG.txt"),
-                finalCommandDebug);
 
             RaiseCommandStates();
         }
@@ -427,19 +385,6 @@ public MigrationDestination? SelectedDestination
                         () => CalculateDirectorySize(
                             profile.ProfilePath));
 
-                StatusMessage =
-                    $"SIZE DEBUG: {profile.UserName} = {size:N0} bytes ({FormatSize(size)})";
-
-                profile.UpdateSize(size);
-            }
-            catch
-            {
-                profile.UpdateSize(0);
-            }
-
-            // Calculate the standard folder sizes independently.
-            try
-            {
                 var folderSizes =
                     await Task.Run(
                         () => CalculateProfileFolderSizes(
@@ -464,10 +409,6 @@ public MigrationDestination? SelectedDestination
 
         OnPropertyChanged(nameof(EstimatedMigrationSizeBytes));
         OnPropertyChanged(nameof(EstimatedMigrationSizeDisplay));
-        StatusMessage =
-            $"ESTIMATE DEBUG: Selected={SelectedProfiles.Count}, " +
-            $"Total={EstimatedMigrationSizeBytes:N0} bytes, " +
-            $"Display={EstimatedMigrationSizeDisplay}";
     }
 
     private static ProfileFolderSizes CalculateProfileFolderSizes(
@@ -735,12 +676,12 @@ public MigrationDestination? SelectedDestination
 
     private void RefreshDrives()
     {
-        var previousDriveLetter =
-            SelectedDestination?.DriveLetter;
 
         try
         {
-            AvailableDrives.Clear();
+            var previousDriveLetter =
+                SelectedDestination?.DriveLetter;
+AvailableDrives.Clear();
 
             var drives =
                 _driveDetectionService.GetAvailableDrives();
@@ -775,34 +716,19 @@ public MigrationDestination? SelectedDestination
 
             SelectedDestination =
                 AvailableDrives.FirstOrDefault(
+                    d => d.IsRecommended)
+                ?? AvailableDrives.FirstOrDefault(
                     d =>
+                        !d.IsSystemDrive &&
                         !string.IsNullOrWhiteSpace(previousDriveLetter) &&
                         string.Equals(
                             d.DriveLetter,
                             previousDriveLetter,
                             StringComparison.OrdinalIgnoreCase))
                 ?? AvailableDrives.FirstOrDefault(
-                    d => d.IsRecommended)
+                    d => !d.IsSystemDrive)
                 ?? AvailableDrives.FirstOrDefault();
 
-            var destinationDebug =
-                SelectedDestination is null
-                    ? "SelectedDestination=NULL"
-                    : $"SelectedDestination={SelectedDestination.DriveLetter}, " +
-                      $"IsSystemDrive={SelectedDestination.IsSystemDrive}, " +
-                      $"IsExternal={SelectedDestination.IsExternal}, " +
-                      $"IsRemovable={SelectedDestination.IsRemovable}, " +
-                      $"AvailableDrives={AvailableDrives.Count}, " +
-                      $"SelectedProfiles={SelectedProfiles.Count}, " +
-                      $"OperationRunning={_operationRunning}, " +
-                      $"CanStartMigration={CanStartMigration()}, " +
-                      $"CanRunVerification={CanRunVerification()}";
-
-            File.WriteAllText(
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    "MTE-DESTINATION-DEBUG.txt"),
-                destinationDebug);
 
             RaiseCommandStates();
         }
@@ -1071,15 +997,6 @@ public MigrationDestination? SelectedDestination
                 new Progress<MigrationProgressInfo>(
                     info =>
                     {
-                        try
-                        {
-                            File.AppendAllText(
-                                @"C:\MTE-Progress-Debug.txt",
-                                $"{DateTime.Now:HH:mm:ss.fff} - CALLBACK: Section={info.Section}, Percentage={info.Percentage}, Complete={info.IsComplete}, Message={info.Message}{Environment.NewLine}");
-                        }
-                        catch
-                        {
-                        }
 
                         if (!IsCurrentProgressOperation(
                                 migrationProgressGeneration))
@@ -1177,6 +1094,7 @@ public MigrationDestination? SelectedDestination
                     CopiedBytes = migrationResult.CopiedBytes,
                     VerifiedFiles = migrationResult.VerifiedFiles,
                     FailedFiles = migrationResult.FailedFiles,
+                    SkippedFiles = migrationResult.SkippedFiles,
                     SelectedProfiles =
                         selectedProfiles
                             .Select(profile =>
@@ -1470,4 +1388,3 @@ public sealed class RelayCommand : ICommand
             EventArgs.Empty);
     }
 }
-

@@ -1,4 +1,4 @@
-﻿<Window x:Class="MTE.App.MainWindow"
+<Window x:Class="MTE.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Migration Toolkit Enterprise"
@@ -664,8 +664,9 @@
                 <TextBlock Grid.Column="0"
                            Text="Ready"
                            VerticalAlignment="Center"
-                           FontSize="12"
-                           Opacity="0.65"/>
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Opacity="0.75"/>
 
 
                 <!-- VERIFICATION -->
@@ -734,4 +735,3 @@
     </Grid>
 
 </Window>
-
